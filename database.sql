@@ -1,8 +1,11 @@
 ﻿-- ============================================================
 -- CSDL quản lý đồ án tốt nghiệp (MySQL 8.0+)
 -- Tạo mới database: demo_quan_ly_do_an
--- Lưu ý: DROP DATABASE đang được cố ý không sử dụng để tránh xóa dữ liệu.
+-- Chạy lại file này sẽ xóa database hiện tại và toàn bộ dữ liệu bên trong.
+-- Chỉ dùng khi muốn tạo mới hoàn toàn.
 -- ============================================================
+
+DROP DATABASE IF EXISTS demo_quan_ly_do_an;
 
 CREATE DATABASE IF NOT EXISTS demo_quan_ly_do_an
   CHARACTER SET utf8mb4
@@ -19,7 +22,7 @@ CREATE TABLE IF NOT EXISTS SINHVIEN (
     so_dien_thoai VARCHAR(20) NULL,
     PRIMARY KEY (ma_sinh_vien),
     UNIQUE KEY uq_sinhvien_email (email)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS DETAI (
     ma_de_tai       VARCHAR(20) NOT NULL,
@@ -30,7 +33,7 @@ CREATE TABLE IF NOT EXISTS DETAI (
     trang_thai      ENUM('MO_DANG_KY', 'DA_DONG') NOT NULL DEFAULT 'MO_DANG_KY',
     PRIMARY KEY (ma_de_tai),
     CONSTRAINT chk_detai_so_luong CHECK (so_luong_toi_da > 0)
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS DANGKY (
     ma_dang_ky    BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
@@ -38,17 +41,22 @@ CREATE TABLE IF NOT EXISTS DANGKY (
     ma_de_tai     VARCHAR(20) NOT NULL,
     ngay_dang_ky  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     trang_thai    ENUM('DA_DANG_KY', 'DA_HUY') NOT NULL DEFAULT 'DA_DANG_KY',
+    ma_sinh_vien_dang_ky VARCHAR(20) GENERATED ALWAYS AS (
+        CASE WHEN trang_thai = 'DA_DANG_KY' THEN ma_sinh_vien ELSE NULL END
+    ) STORED,
     PRIMARY KEY (ma_dang_ky),
     -- Một sinh viên không thể đăng ký cùng một đề tài hai lần.
     UNIQUE KEY uq_dangky_sinhvien_detai (ma_sinh_vien, ma_de_tai),
+    -- Chỉ một đăng ký còn hiệu lực cho mỗi sinh viên; DA_HUY tạo giá trị NULL.
+    UNIQUE KEY uq_dangky_sinhvien_dang_ky (ma_sinh_vien_dang_ky),
     KEY idx_dangky_detai (ma_de_tai),
     CONSTRAINT fk_dangky_sinhvien
         FOREIGN KEY (ma_sinh_vien) REFERENCES SINHVIEN (ma_sinh_vien)
-        ON UPDATE CASCADE ON DELETE RESTRICT,
+        ON UPDATE RESTRICT ON DELETE RESTRICT,
     CONSTRAINT fk_dangky_detai
         FOREIGN KEY (ma_de_tai) REFERENCES DETAI (ma_de_tai)
         ON UPDATE CASCADE ON DELETE RESTRICT
-) ENGINE=InnoDB;
+) ENGINE=InnoDB DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- Dữ liệu mẫu (có thể chạy lại mà không tạo bản ghi trùng).
 INSERT INTO SINHVIEN (ma_sinh_vien, ho_ten, email, lop, nganh, so_dien_thoai)

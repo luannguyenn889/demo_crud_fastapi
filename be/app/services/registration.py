@@ -25,6 +25,15 @@ def create_registration(db: Session, student_key: str, topic_key: str):
     topic = verify(DETAI_SERVICE_URL, "detais", topic_key)
     if topic["trang_thai"] != "MO_DANG_KY":
         raise HTTPException(409, "Đề tài đã đóng đăng ký")
+    active_registration = db.scalar(
+        select(DangKy).where(
+            DangKy.ma_sinh_vien == student_key,
+            DangKy.trang_thai == "DA_DANG_KY",
+        )
+    )
+    if active_registration:
+        raise HTTPException(409, "Sinh viên cần hủy đăng ký hiện tại trước khi đăng ký đề tài khác")
+
     existing = db.scalar(select(DangKy).where(DangKy.ma_sinh_vien == student_key, DangKy.ma_de_tai == topic_key))
     if existing: raise HTTPException(409, "Sinh viên đã có đăng ký với đề tài này")
     count = db.scalar(select(func.count()).select_from(DangKy).where(DangKy.ma_de_tai == topic_key, DangKy.trang_thai == "DA_DANG_KY"))
