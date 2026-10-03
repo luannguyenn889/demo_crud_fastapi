@@ -1,0 +1,167 @@
+<div class="card">
+  <!-- Table Header -->
+  <div class="card-header">
+    <div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <h2 class="card-title">Danh mục đề tài tốt nghiệp</h2>
+        <span class="badge badge-amber">{{ filtered.length }} / {{ topics.length }} đề tài</span>
+      </div>
+      <p class="card-subtitle">Quản lý nội dung nghiên cứu, giảng viên hướng dẫn và chỉ tiêu sinh viên tiếp nhận</p>
+    </div>
+
+    <div class="table-header-controls">
+      <!-- Status Filter Tabs -->
+      <div class="filter-pills">
+        <button
+          type="button"
+          class="pill-btn"
+          [class.active]="statusFilter === 'ALL'"
+          (click)="setStatusFilter('ALL')">
+          Tất cả
+        </button>
+        <button
+          type="button"
+          class="pill-btn"
+          [class.active]="statusFilter === 'MO_DANG_KY'"
+          (click)="setStatusFilter('MO_DANG_KY')">
+          Đang mở
+        </button>
+        <button
+          type="button"
+          class="pill-btn"
+          [class.active]="statusFilter === 'DA_DONG'"
+          (click)="setStatusFilter('DA_DONG')">
+          Đã đóng
+        </button>
+      </div>
+
+      <!-- Search Input -->
+      <div class="search-wrapper">
+        <span class="search-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </span>
+        <input
+          type="text"
+          class="search-input"
+          placeholder="Tìm mã, tên đề tài, GV..."
+          [value]="query"
+          (input)="queryChange.emit($any($event.target).value)"
+          id="search-topic">
+        @if (query) {
+          <button class="search-clear" type="button" (click)="queryChange.emit('')" title="Xóa tìm kiếm">✕</button>
+        }
+      </div>
+
+      <!-- Add Topic Button -->
+      <button class="btn btn-primary" (click)="openAdd.emit()" id="btn-add-topic">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        <span>Thêm đề tài</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Data Table -->
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Mã đề tài</th>
+          <th>Tên đề tài & Mô tả</th>
+          <th>Giảng viên hướng dẫn</th>
+          <th>Chỉ tiêu</th>
+          <th>Trạng thái</th>
+          <th style="text-align: right;">Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (t of filtered; track t.ma_de_tai) {
+          <tr>
+            <td>
+              <span class="badge badge-slate font-mono" style="font-weight: 700;">{{ t.ma_de_tai }}</span>
+            </td>
+            <td>
+              <div class="topic-info-box">
+                <span class="topic-name">{{ t.ten_de_tai }}</span>
+                <span class="topic-desc">{{ t.mo_ta || 'Chưa có mô tả chi tiết cho đề tài này.' }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="advisor-box">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                  <circle cx="12" cy="7" r="4"/>
+                </svg>
+                <span>{{ t.giang_vien_huong_dan || 'Chưa phân công' }}</span>
+              </div>
+            </td>
+            <td>
+              <span class="badge badge-indigo font-mono">
+                {{ t.so_luong_toi_da }} SV
+              </span>
+            </td>
+            <td>
+              @if (t.trang_thai === 'MO_DANG_KY') {
+                <span class="badge badge-emerald">
+                  <span class="pulse-dot pulse-dot-emerald"></span>
+                  Đang mở đăng ký
+                </span>
+              } @else {
+                <span class="badge badge-slate">
+                  <span class="pulse-dot pulse-dot-rose"></span>
+                  Đã đóng đăng ký
+                </span>
+              }
+            </td>
+            <td style="text-align: right;">
+              <div class="action-cell" style="justify-content: flex-end;">
+                <button
+                  type="button"
+                  class="btn-icon"
+                  title="Chỉnh sửa đề tài"
+                  (click)="edit.emit(t)">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  class="btn-icon btn-icon-danger"
+                  title="Xóa đề tài"
+                  (click)="remove.emit(t)">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    <line x1="10" y1="11" x2="10" y2="17"/>
+                    <line x1="14" y1="11" x2="14" y2="17"/>
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="6" class="table-empty">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <p>Không có đề tài nào thỏa mãn điều kiện lọc.</p>
+              @if (query || statusFilter !== 'ALL') {
+                <button class="btn btn-secondary" style="margin-top: 10px;" (click)="queryChange.emit(''); statusFilter = 'ALL'">
+                  Xóa bộ lọc
+                </button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

@@ -1,0 +1,380 @@
+<div class="shell">
+  <!-- Left Sidebar Navigation -->
+  <app-navigation
+    [page]="tab()"
+    [mobileOpen]="mobileMenuOpen()"
+    (navigate)="open($event)"
+    (closeMobile)="mobileMenuOpen.set(false)" />
+
+  <!-- Main Content Wrapper -->
+  <div class="main-wrapper">
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="topbar-left">
+        <!-- Mobile Menu Toggle Button -->
+        <button
+          type="button"
+          class="mobile-menu-btn"
+          (click)="mobileMenuOpen.set(!mobileMenuOpen())"
+          aria-label="Mở menu">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="3" y1="12" x2="21" y2="12"/>
+            <line x1="3" y1="6" x2="21" y2="6"/>
+            <line x1="3" y1="18" x2="21" y2="18"/>
+          </svg>
+        </button>
+
+        <!-- Breadcrumbs -->
+        <div class="breadcrumbs">
+          <span>Khoa CNTT</span>
+          <span class="breadcrumb-separator">/</span>
+          <span class="breadcrumb-active">{{ pageLabel }}</span>
+        </div>
+      </div>
+
+      <div class="topbar-right">
+        <!-- API Online Status Indicator -->
+        <div class="api-status-badge">
+          <span class="pulse-dot pulse-dot-emerald"></span>
+          <span>Microservices Online</span>
+        </div>
+
+        <!-- Refresh Button -->
+        <button
+          type="button"
+          class="btn btn-secondary"
+          style="padding: 7px 12px; font-size: 12px;"
+          (click)="refresh()"
+          title="Tải lại toàn bộ dữ liệu">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="23 4 23 10 17 10"/>
+            <polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          <span>Làm mới</span>
+        </button>
+
+        <div class="topbar-divider"></div>
+
+        <!-- Admin Profile -->
+        <div class="user-profile">
+          <div class="avatar avatar-indigo" style="width: 34px; height: 34px;">
+            AD
+          </div>
+          <div class="user-info">
+            <span class="user-name">Quản trị viên</span>
+            <span class="user-role">Điều phối khoa</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Page Content Container -->
+    <main class="content-area">
+      <!-- Section Header (hidden on overview) -->
+      @if (tab() !== 'overview') {
+        <div class="page-header">
+          <div class="page-header-title">
+            <span class="page-category">DỮ LIỆU ĐỒ ÁN KHOA CNTT</span>
+            <h1 class="page-title">{{ pageLabel }}</h1>
+            <p class="page-desc">Quản lý và đồng bộ thông tin sinh viên, danh mục đề tài và lịch sử đăng ký qua REST API.</p>
+          </div>
+        </div>
+      }
+
+      <!-- Page Views -->
+      @switch (tab()) {
+        @case ('overview') {
+          <app-overview
+            [students]="students()"
+            [topics]="topics()"
+            [registrations]="registrations()"
+            (navigate)="open($event)" />
+        }
+        @case ('students') {
+          <app-student-management
+            [students]="students()"
+            [query]="query()"
+            (queryChange)="query.set($event)"
+            (openAdd)="openAddStudent()"
+            (edit)="editStudent($event)"
+            (remove)="confirmDeleteStudent($event)" />
+        }
+        @case ('topics') {
+          <app-topic-management
+            [topics]="topics()"
+            [query]="query()"
+            (queryChange)="query.set($event)"
+            (openAdd)="openAddTopic()"
+            (edit)="editTopic($event)"
+            (remove)="confirmDeleteTopic($event)" />
+        }
+        @case ('registrations') {
+          <app-registration-management
+            [students]="students()"
+            [topics]="topics()"
+            [registrations]="registrations()"
+            [(studentKey)]="regStudent"
+            [(topicKey)]="regTopic"
+            (create)="createRegistration()"
+            (cancel)="confirmCancelRegistration($event)" />
+        }
+      }
+    </main>
+
+    <!-- App Footer -->
+    <footer class="app-footer">
+      <div>
+        <span class="footer-brand">KHOA CÔNG NGHỆ THÔNG TIN</span> · HỆ THỐNG QUẢN LÝ ĐỒ ÁN TỐT NGHIỆP
+      </div>
+      <div>
+        REST Microservices Gateway · FastAPI & Angular v21
+      </div>
+    </footer>
+  </div>
+</div>
+
+<!-- ==========================================================================
+     Modal Dialog: Sinh viên (Thêm / Sửa)
+     ========================================================================== -->
+@if (studentModalOpen()) {
+  <div class="modal-overlay" (click)="closeStudentModal()">
+    <div class="modal-dialog" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">
+          {{ editingStudent ? 'Cập nhật hồ sơ sinh viên' : 'Thêm sinh viên mới' }}
+        </h3>
+        <button class="btn-icon" type="button" (click)="closeStudentModal()" title="Đóng">✕</button>
+      </div>
+      <form (ngSubmit)="saveStudent()">
+        <div class="modal-body">
+          <div class="modal-form-grid">
+            <div class="form-group">
+              <label class="form-label form-label-required" for="student-id">Mã sinh viên</label>
+              <input
+                id="student-id"
+                name="ma_sinh_vien"
+                class="form-input font-mono"
+                [(ngModel)]="studentForm.ma_sinh_vien"
+                [readonly]="editingStudent"
+                placeholder="VD: SV001"
+                required
+                maxlength="20">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label form-label-required" for="student-name">Họ và tên</label>
+              <input
+                id="student-name"
+                name="ho_ten"
+                class="form-input"
+                [(ngModel)]="studentForm.ho_ten"
+                placeholder="Nguyễn Văn A"
+                required
+                maxlength="100">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="student-email">Địa chỉ Email</label>
+              <input
+                id="student-email"
+                type="email"
+                name="email"
+                class="form-input"
+                [(ngModel)]="studentForm.email"
+                placeholder="email@university.edu.vn">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="student-phone">Số điện thoại</label>
+              <input
+                id="student-phone"
+                name="so_dien_thoai"
+                class="form-input font-mono"
+                [(ngModel)]="studentForm.so_dien_thoai"
+                placeholder="0912345678">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="student-class">Lớp sinh hoạt</label>
+              <input
+                id="student-class"
+                name="lop"
+                class="form-input"
+                [(ngModel)]="studentForm.lop"
+                placeholder="CNTT-K20A">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label" for="student-major">Chuyên ngành</label>
+              <input
+                id="student-major"
+                name="nganh"
+                class="form-input"
+                [(ngModel)]="studentForm.nganh"
+                placeholder="Kỹ thuật phần mềm">
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeStudentModal()">Hủy bỏ</button>
+          <button type="submit" class="btn btn-primary">
+            {{ editingStudent ? 'Lưu cập nhật' : 'Xác nhận thêm mới' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- ==========================================================================
+     Modal Dialog: Đề tài (Thêm / Sửa)
+     ========================================================================== -->
+@if (topicModalOpen()) {
+  <div class="modal-overlay" (click)="closeTopicModal()">
+    <div class="modal-dialog" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title">
+          {{ editingTopic ? 'Cập nhật thông tin đề tài' : 'Khai báo đề tài mới' }}
+        </h3>
+        <button class="btn-icon" type="button" (click)="closeTopicModal()" title="Đóng">✕</button>
+      </div>
+      <form (ngSubmit)="saveTopic()">
+        <div class="modal-body">
+          <div class="modal-form-grid">
+            <div class="form-group">
+              <label class="form-label form-label-required" for="topic-id">Mã đề tài</label>
+              <input
+                id="topic-id"
+                name="ma_de_tai"
+                class="form-input font-mono"
+                [(ngModel)]="topicForm.ma_de_tai"
+                [readonly]="editingTopic"
+                placeholder="VD: DT001"
+                required
+                maxlength="20">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label form-label-required" for="topic-advisor">Giảng viên hướng dẫn</label>
+              <input
+                id="topic-advisor"
+                name="giang_vien_huong_dan"
+                class="form-input"
+                [(ngModel)]="topicForm.giang_vien_huong_dan"
+                placeholder="TS. Trần Văn B">
+            </div>
+
+            <div class="form-group col-span-2">
+              <label class="form-label form-label-required" for="topic-name">Tên đề tài nghiên cứu</label>
+              <input
+                id="topic-name"
+                name="ten_de_tai"
+                class="form-input"
+                [(ngModel)]="topicForm.ten_de_tai"
+                placeholder="Xây dựng hệ thống..."
+                required
+                maxlength="200">
+            </div>
+
+            <div class="form-group">
+              <label class="form-label form-label-required" for="topic-capacity">Chỉ tiêu SV tối đa</label>
+              <input
+                id="topic-capacity"
+                type="number"
+                min="1"
+                max="20"
+                name="so_luong_toi_da"
+                class="form-input font-mono"
+                [(ngModel)]="topicForm.so_luong_toi_da"
+                required>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label form-label-required" for="topic-status">Trạng thái đăng ký</label>
+              <select
+                id="topic-status"
+                name="trang_thai"
+                class="form-select"
+                [(ngModel)]="topicForm.trang_thai"
+                required>
+                <option value="MO_DANG_KY">Mở đăng ký</option>
+                <option value="DA_DONG">Đã đóng đăng ký</option>
+              </select>
+            </div>
+
+            <div class="form-group col-span-2">
+              <label class="form-label" for="topic-desc">Mô tả tóm tắt nội dung</label>
+              <textarea
+                id="topic-desc"
+                rows="3"
+                name="mo_ta"
+                class="form-textarea"
+                [(ngModel)]="topicForm.mo_ta"
+                placeholder="Mô tả phạm vi, công nghệ sử dụng và yêu cầu đồ án..."></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" (click)="closeTopicModal()">Hủy bỏ</button>
+          <button type="submit" class="btn btn-primary">
+            {{ editingTopic ? 'Lưu cập nhật' : 'Xác nhận tạo đề tài' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+}
+
+<!-- ==========================================================================
+     Modal Dialog: Xác nhận thao tác (Xóa / Hủy)
+     ========================================================================== -->
+@if (confirmModalOpen() && confirmData()) {
+  <div class="modal-overlay" (click)="confirmModalOpen.set(false)">
+    <div class="modal-dialog modal-dialog-sm" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3 class="modal-title" style="color: var(--danger-600);">{{ confirmData()!.title }}</h3>
+        <button class="btn-icon" type="button" (click)="confirmModalOpen.set(false)" title="Đóng">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 13.5px; color: var(--slate-600); line-height: 1.5;">
+          {{ confirmData()!.message }}
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" (click)="confirmModalOpen.set(false)">Hủy</button>
+        <button type="button" class="btn btn-danger" (click)="confirmData()!.action()">
+          {{ confirmData()!.confirmLabel }}
+        </button>
+      </div>
+    </div>
+  </div>
+}
+
+<!-- ==========================================================================
+     Toast Notifications Container (Floating Top-Right)
+     ========================================================================== -->
+<div class="toast-container" aria-live="polite">
+  @for (toast of toasts(); track toast.id) {
+    <div class="toast" [class.toast-success]="toast.type === 'success'" [class.toast-error]="toast.type === 'error'">
+      <div class="toast-icon">
+        @if (toast.type === 'success') {
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        } @else {
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#f43f5e" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        }
+      </div>
+      <div class="toast-content">
+        <div class="toast-title">{{ toast.title }}</div>
+        <div class="toast-message">{{ toast.message }}</div>
+      </div>
+      <button type="button" class="toast-close" (click)="removeToast(toast.id)" aria-label="Đóng thông báo">✕</button>
+    </div>
+  }
+</div>

@@ -1,0 +1,259 @@
+<div class="overview-container">
+  <!-- Welcome Banner -->
+  <div class="welcome-banner">
+    <div class="welcome-text">
+      <span class="welcome-date">HỆ THỐNG ĐIỀU PHỐI ĐỒ ÁN TỐT NGHIỆP</span>
+      <h1 class="welcome-title">Chào mừng trở lại, Quản trị viên</h1>
+      <p class="welcome-subtitle">Theo dõi số liệu phân bổ sinh viên, trạng thái đề tài và tiến độ đăng ký trong thời gian thực.</p>
+    </div>
+    <button class="btn btn-primary" (click)="navigate.emit('registrations')" id="btn-quick-register">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="12" y1="5" x2="12" y2="19"/>
+        <line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      <span>Tạo đăng ký mới</span>
+    </button>
+  </div>
+
+  <!-- 4 KPI Stat Cards -->
+  <div class="stats-grid">
+    <!-- Card 1: Students -->
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-label">Tổng sinh viên</span>
+        <div class="stat-icon icon-blue">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+        </div>
+      </div>
+      <div class="stat-value">{{ students.length }}</div>
+      <div class="stat-footer">
+        <span class="badge badge-indigo">Hồ sơ</span>
+        <span>Sinh viên đủ điều kiện làm đồ án</span>
+      </div>
+    </div>
+
+    <!-- Card 2: Topics -->
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-label">Đề tài nghiên cứu</span>
+        <div class="stat-icon icon-amber">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+          </svg>
+        </div>
+      </div>
+      <div class="stat-value">{{ topics.length }}</div>
+      <div class="stat-footer">
+        <span class="badge badge-emerald">
+          <span class="pulse-dot pulse-dot-emerald"></span>
+          {{ openTopics }} Đang mở
+        </span>
+        <span>/ {{ closedTopics }} đã đóng</span>
+      </div>
+    </div>
+
+    <!-- Card 3: Active Registrations -->
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-label">Đăng ký hiệu lực</span>
+        <div class="stat-icon icon-emerald">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+            <polyline points="22 4 12 14.01 9 11.01"/>
+          </svg>
+        </div>
+      </div>
+      <div class="stat-value">{{ activeRegistrations }}</div>
+      <div class="stat-footer">
+        @if (cancelledRegistrations > 0) {
+          <span class="badge badge-rose">{{ cancelledRegistrations }} đã hủy</span>
+        }
+        <span>Tổng cộng {{ registrations.length }} bản ghi</span>
+      </div>
+    </div>
+
+    <!-- Card 4: Capacity Fill Rate -->
+    <div class="stat-card">
+      <div class="stat-header">
+        <span class="stat-label">Tỷ lệ lấp đầy</span>
+        <div class="stat-icon icon-indigo">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21.21 15.89A10 10 0 1 1 8 2.83"/>
+            <path d="M22 12A10 10 0 0 0 12 2v10z"/>
+          </svg>
+        </div>
+      </div>
+      <div class="stat-value">{{ fillRate }}%</div>
+      <div class="stat-footer">
+        <span>Đã dùng {{ activeRegistrations }} / {{ totalCapacity }} chỉ tiêu</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Overview Main Content Grid -->
+  <div class="overview-main-grid">
+    <!-- Left Column: Recent Registrations Table -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">Đăng ký gần đây</h2>
+          <p class="card-subtitle">Các hoạt động đăng ký đề tài mới nhất của sinh viên</p>
+        </div>
+        <button class="btn btn-ghost" (click)="navigate.emit('registrations')">
+          <span>Xem tất cả</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="table-container">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Mã ĐK</th>
+              <th>Sinh viên</th>
+              <th>Đề tài</th>
+              <th>Thời gian</th>
+              <th>Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of registrations.slice(0, 6); track r.ma_dang_ky) {
+              <tr>
+                <td>
+                  <span class="badge badge-slate font-mono">#{{ r.ma_dang_ky }}</span>
+                </td>
+                <td>
+                  <div style="display: flex; align-items: center; gap: 8px;">
+                    <div class="avatar avatar-indigo" style="width: 28px; height: 28px; font-size: 11px;">
+                      {{ r.ma_sinh_vien.substring(0, 2).toUpperCase() }}
+                    </div>
+                    <div>
+                      <strong style="color: var(--slate-900); font-size: 13px;">{{ getStudentName(r.ma_sinh_vien) }}</strong>
+                      <div class="font-mono" style="font-size: 11px; color: var(--slate-400);">{{ r.ma_sinh_vien }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div style="max-width: 260px;">
+                    <span style="font-weight: 600; color: var(--slate-800); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                      {{ getTopicName(r.ma_de_tai) }}
+                    </span>
+                    <span class="font-mono" style="font-size: 11px; color: var(--primary-600);">{{ r.ma_de_tai }}</span>
+                  </div>
+                </td>
+                <td style="white-space: nowrap; color: var(--slate-500); font-size: 12px;">
+                  {{ r.ngay_dang_ky | date:'dd/MM/yyyy HH:mm' }}
+                </td>
+                <td>
+                  @if (r.trang_thai === 'DA_DANG_KY') {
+                    <span class="badge badge-emerald">
+                      <span class="pulse-dot pulse-dot-emerald"></span>
+                      Đang thực hiện
+                    </span>
+                  } @else {
+                    <span class="badge badge-rose">
+                      <span class="pulse-dot pulse-dot-rose"></span>
+                      Đã hủy
+                    </span>
+                  }
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="5" class="table-empty">
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="4" width="20" height="16" rx="2"/>
+                    <path d="M7 15h0M2 9.5h20"/>
+                  </svg>
+                  <p>Chưa có lượt đăng ký đề tài nào trong hệ thống.</p>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Right Column: Quick Actions & Progress Widget -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <h2 class="card-title">Truy cập nhanh</h2>
+          <p class="card-subtitle">Các nghiệp vụ thường dùng</p>
+        </div>
+      </div>
+      <div class="card-body">
+        <button type="button" class="quick-action-item" (click)="navigate.emit('students')">
+          <div class="quick-action-icon icon-blue">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <line x1="19" y1="8" x2="19" y2="14"/>
+              <line x1="22" y1="11" x2="16" y2="11"/>
+            </svg>
+          </div>
+          <div class="quick-action-info">
+            <span class="quick-action-title">Thêm hồ sơ sinh viên</span>
+            <span class="quick-action-desc">Quản lý và cập nhật sinh viên mới</span>
+          </div>
+          <div class="quick-action-arrow">→</div>
+        </button>
+
+        <button type="button" class="quick-action-item" (click)="navigate.emit('topics')">
+          <div class="quick-action-icon icon-amber">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="12" y1="18" x2="12" y2="12"/>
+              <line x1="9" y1="15" x2="15" y2="15"/>
+            </svg>
+          </div>
+          <div class="quick-action-info">
+            <span class="quick-action-title">Khai báo đề tài mới</span>
+            <span class="quick-action-desc">Thêm đề tài tốt nghiệp của giảng viên</span>
+          </div>
+          <div class="quick-action-arrow">→</div>
+        </button>
+
+        <button type="button" class="quick-action-item" (click)="navigate.emit('registrations')">
+          <div class="quick-action-icon icon-emerald">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10 9 9 9 8 9"/>
+            </svg>
+          </div>
+          <div class="quick-action-info">
+            <span class="quick-action-title">Phân bổ đăng ký</span>
+            <span class="quick-action-desc">Xác nhận và theo dõi danh sách</span>
+          </div>
+          <div class="quick-action-arrow">→</div>
+        </button>
+
+        <!-- Capacity Progress Widget -->
+        <div class="progress-box">
+          <div class="progress-header">
+            <span>Tiến độ lấp đầy đề tài</span>
+            <span class="font-mono" style="color: var(--primary-600);">{{ fillRate }}%</span>
+          </div>
+          <div class="progress-bar-bg">
+            <div class="progress-bar-fill" [style.width.%]="fillRate"></div>
+          </div>
+          <span style="font-size: 11px; color: var(--slate-400); margin-top: 2px;">
+            Đã đăng ký {{ activeRegistrations }} / {{ totalCapacity }} chỉ tiêu tối đa
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

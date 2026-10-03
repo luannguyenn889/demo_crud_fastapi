@@ -1,0 +1,142 @@
+<div class="card">
+  <!-- Table Header -->
+  <div class="card-header">
+    <div>
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <h2 class="card-title">Hồ sơ sinh viên</h2>
+        <span class="badge badge-indigo">{{ filtered.length }} / {{ students.length }} sinh viên</span>
+      </div>
+      <p class="card-subtitle">Quản lý danh sách sinh viên đủ điều kiện làm khóa luận tốt nghiệp</p>
+    </div>
+
+    <div class="table-header-actions">
+      <!-- Search Input -->
+      <div class="search-wrapper">
+        <span class="search-icon">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+        </span>
+        <input
+          type="text"
+          class="search-input"
+          placeholder="Tìm tên, mã SV, email, lớp..."
+          [value]="query"
+          (input)="queryChange.emit($any($event.target).value)"
+          id="search-student">
+        @if (query) {
+          <button class="search-clear" type="button" (click)="queryChange.emit('')" title="Xóa tìm kiếm">✕</button>
+        }
+      </div>
+
+      <!-- Add Student Button -->
+      <button class="btn btn-primary" (click)="openAdd.emit()" id="btn-add-student">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="5" x2="12" y2="19"/>
+          <line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        <span>Thêm sinh viên</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Data Table -->
+  <div class="table-container">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Sinh viên</th>
+          <th>Thông tin liên hệ</th>
+          <th>Lớp & Chuyên ngành</th>
+          <th style="text-align: right;">Thao tác</th>
+        </tr>
+      </thead>
+      <tbody>
+        @for (s of filtered; track s.ma_sinh_vien; let idx = $index) {
+          <tr>
+            <td>
+              <div class="student-identity">
+                <div class="avatar" [class]="getAvatarClass(idx)">
+                  {{ getInitials(s.ho_ten) }}
+                </div>
+                <div class="student-name-box">
+                  <span class="student-name">{{ s.ho_ten }}</span>
+                  <span class="student-id font-mono">{{ s.ma_sinh_vien }}</span>
+                </div>
+              </div>
+            </td>
+            <td>
+              <div class="contact-cell">
+                <div class="contact-item">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                    <polyline points="22,6 12,13 2,6"/>
+                  </svg>
+                  <span>{{ s.email || 'Chưa có email' }}</span>
+                </div>
+                @if (s.so_dien_thoai) {
+                  <div class="contact-item">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
+                    </svg>
+                    <span class="font-mono">{{ s.so_dien_thoai }}</span>
+                  </div>
+                }
+              </div>
+            </td>
+            <td>
+              <div class="academic-cell">
+                <div>
+                  <span class="badge badge-slate font-mono">{{ s.lop || 'Chưa phân lớp' }}</span>
+                </div>
+                <span class="major-text">{{ s.nganh || 'Chưa cập nhật ngành' }}</span>
+              </div>
+            </td>
+            <td style="text-align: right;">
+              <div class="action-cell" style="justify-content: flex-end;">
+                <button
+                  type="button"
+                  class="btn-icon"
+                  title="Chỉnh sửa hồ sơ"
+                  (click)="edit.emit(s)">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  class="btn-icon btn-icon-danger"
+                  title="Xóa sinh viên"
+                  (click)="remove.emit(s)">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                    <line x1="10" y1="11" x2="10" y2="17"/>
+                    <line x1="14" y1="11" x2="14" y2="17"/>
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+        } @empty {
+          <tr>
+            <td colspan="4" class="table-empty">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+              </svg>
+              <p>Không tìm thấy sinh viên nào phù hợp với bộ lọc.</p>
+              @if (query) {
+                <button class="btn btn-secondary" style="margin-top: 10px;" (click)="queryChange.emit('')">
+                  Xóa bộ lọc tìm kiếm
+                </button>
+              }
+            </td>
+          </tr>
+        }
+      </tbody>
+    </table>
+  </div>
+</div>

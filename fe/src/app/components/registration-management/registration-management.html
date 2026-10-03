@@ -1,0 +1,244 @@
+<div class="registration-container">
+  <!-- Create Registration Panel -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <h2 class="card-title">Tạo lượt đăng ký đề tài</h2>
+        <p class="card-subtitle">Phân công đề tài tốt nghiệp cho sinh viên (Hệ thống kiểm tra chỉ tiêu tiếp nhận và trạng thái mở)</p>
+      </div>
+    </div>
+    <div class="card-body">
+      <form class="registration-form-grid" (ngSubmit)="create.emit()">
+        <!-- Select Student -->
+        <div class="form-group">
+          <label class="form-label form-label-required" for="select-student">Sinh viên thực hiện</label>
+          <select
+            id="select-student"
+            name="regstudent"
+            class="form-select"
+            [ngModel]="studentKey"
+            (ngModelChange)="studentKeyChange.emit($event)"
+            required>
+            <option value="">-- Chọn sinh viên tham gia --</option>
+            @for (s of students; track s.ma_sinh_vien) {
+              <option [value]="s.ma_sinh_vien">
+                {{ s.ma_sinh_vien }} · {{ s.ho_ten }} ({{ s.lop || 'Chưa có lớp' }})
+              </option>
+            }
+          </select>
+        </div>
+
+        <!-- Select Topic -->
+        <div class="form-group">
+          <label class="form-label form-label-required" for="select-topic">Đề tài tốt nghiệp</label>
+          <select
+            id="select-topic"
+            name="regtopic"
+            class="form-select"
+            [ngModel]="topicKey"
+            (ngModelChange)="topicKeyChange.emit($event)"
+            required>
+            <option value="">-- Chọn đề tài nghiên cứu --</option>
+            @for (t of topics; track t.ma_de_tai) {
+              <option [value]="t.ma_de_tai" [disabled]="t.trang_thai !== 'MO_DANG_KY'">
+                {{ t.ma_de_tai }} · {{ t.ten_de_tai }}
+                ({{ t.trang_thai === 'MO_DANG_KY' ? 'Đang mở' : 'Đã đóng' }} - Chỉ tiêu: {{ t.so_luong_toi_da }} SV)
+              </option>
+            }
+          </select>
+        </div>
+
+        <!-- Action Button -->
+        <button
+          type="submit"
+          class="btn btn-primary"
+          style="height: 42px;"
+          [disabled]="!studentKey || !topicKey"
+          id="btn-submit-registration">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          <span>Xác nhận đăng ký</span>
+        </button>
+      </form>
+
+      <!-- Live Selection Preview -->
+      @if (selectedTopic) {
+        <div class="preview-box">
+          <div class="preview-item">
+            <span class="preview-label">Giảng viên HD:</span>
+            <strong>{{ selectedTopic.giang_vien_huong_dan || 'Chưa phân công' }}</strong>
+          </div>
+          <div class="preview-item">
+            <span class="preview-label">Chỉ tiêu đề tài:</span>
+            <span class="badge badge-indigo font-mono">
+              Đã đăng ký: {{ getTopicActiveCount(selectedTopic.ma_de_tai) }} / {{ selectedTopic.so_luong_toi_da }} SV
+            </span>
+          </div>
+          <div class="preview-item">
+            <span class="preview-label">Trạng thái:</span>
+            @if (selectedTopic.trang_thai === 'MO_DANG_KY') {
+              <span class="badge badge-emerald">
+                <span class="pulse-dot pulse-dot-emerald"></span> Đang mở đăng ký
+              </span>
+            } @else {
+              <span class="badge badge-slate">Đã đóng</span>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Registrations Data Table -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <h2 class="card-title">Danh sách đăng ký đề tài</h2>
+          <span class="badge badge-emerald">{{ filteredRegistrations.length }} / {{ registrations.length }} bản ghi</span>
+        </div>
+        <p class="card-subtitle">Theo dõi lịch sử phân công và trạng thái thực hiện đồ án</p>
+      </div>
+
+      <div class="table-header-controls">
+        <!-- Status Filter Tabs -->
+        <div class="filter-pills">
+          <button
+            type="button"
+            class="pill-btn"
+            [class.active]="statusFilter === 'ALL'"
+            (click)="statusFilter = 'ALL'">
+            Tất cả
+          </button>
+          <button
+            type="button"
+            class="pill-btn"
+            [class.active]="statusFilter === 'DA_DANG_KY'"
+            (click)="statusFilter = 'DA_DANG_KY'">
+            Đang thực hiện
+          </button>
+          <button
+            type="button"
+            class="pill-btn"
+            [class.active]="statusFilter === 'DA_HUY'"
+            (click)="statusFilter = 'DA_HUY'">
+            Đã hủy
+          </button>
+        </div>
+
+        <!-- Search Input -->
+        <div class="search-wrapper">
+          <span class="search-icon">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+          </span>
+          <input
+            type="text"
+            class="search-input"
+            placeholder="Tìm theo mã SV, đề tài..."
+            [(ngModel)]="regQuery"
+            id="search-registration">
+          @if (regQuery) {
+            <button class="search-clear" type="button" (click)="regQuery = ''" title="Xóa tìm kiếm">✕</button>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="table-container">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Mã ĐK</th>
+            <th>Sinh viên</th>
+            <th>Đề tài đăng ký</th>
+            <th>Thời gian đăng ký</th>
+            <th>Trạng thái</th>
+            <th style="text-align: right;">Hành động</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of filteredRegistrations; track r.ma_dang_ky) {
+            <tr>
+              <td>
+                <span class="badge badge-slate font-mono" style="font-weight: 700;">#{{ r.ma_dang_ky }}</span>
+              </td>
+              <td>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                  <div class="avatar avatar-indigo" style="width: 28px; height: 28px; font-size: 11px;">
+                    {{ r.ma_sinh_vien.substring(0, 2).toUpperCase() }}
+                  </div>
+                  <div>
+                    <strong style="color: var(--slate-900); font-size: 13px;">{{ getStudent(r.ma_sinh_vien)?.ho_ten || r.ma_sinh_vien }}</strong>
+                    <div class="font-mono" style="font-size: 11px; color: var(--slate-400);">{{ r.ma_sinh_vien }}</div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <div style="max-width: 280px;">
+                  <span style="font-weight: 600; color: var(--slate-800); display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    {{ getTopic(r.ma_de_tai)?.ten_de_tai || r.ma_de_tai }}
+                  </span>
+                  <div style="display: flex; align-items: center; gap: 8px; margin-top: 2px;">
+                    <span class="font-mono" style="font-size: 11px; color: var(--primary-600);">{{ r.ma_de_tai }}</span>
+                    @if (getTopic(r.ma_de_tai)?.giang_vien_huong_dan) {
+                      <span style="font-size: 11px; color: var(--slate-400);">· GV: {{ getTopic(r.ma_de_tai)?.giang_vien_huong_dan }}</span>
+                    }
+                  </div>
+                </div>
+              </td>
+              <td style="white-space: nowrap; color: var(--slate-600); font-size: 12.5px;">
+                {{ r.ngay_dang_ky | date:'dd/MM/yyyy HH:mm' }}
+              </td>
+              <td>
+                @if (r.trang_thai === 'DA_DANG_KY') {
+                  <span class="badge badge-emerald">
+                    <span class="pulse-dot pulse-dot-emerald"></span>
+                    Đang thực hiện
+                  </span>
+                } @else {
+                  <span class="badge badge-rose">
+                    <span class="pulse-dot pulse-dot-rose"></span>
+                    Đã hủy
+                  </span>
+                }
+              </td>
+              <td style="text-align: right;">
+                @if (r.trang_thai === 'DA_DANG_KY') {
+                  <button
+                    type="button"
+                    class="btn btn-danger"
+                    style="padding: 5px 10px; font-size: 11.5px;"
+                    (click)="cancel.emit(r)">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="15" y1="9" x2="9" y2="15"/>
+                      <line x1="9" y1="9" x2="15" y2="15"/>
+                    </svg>
+                    <span>Hủy đăng ký</span>
+                  </button>
+                } @else {
+                  <span style="font-size: 12px; color: var(--slate-400); font-style: italic;">Không khả dụng</span>
+                }
+              </td>
+            </tr>
+          } @empty {
+            <tr>
+              <td colspan="6" class="table-empty">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                  <polyline points="14 2 14 8 20 8"/>
+                </svg>
+                <p>Không có bản ghi đăng ký nào phù hợp với điều kiện tìm kiếm.</p>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>

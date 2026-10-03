@@ -1,0 +1,88 @@
+:host {
+  display: block;
+}
+
+.registration-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.registration-form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 16px;
+  align-items: flex-end;
+}
+
+.preview-box {
+  margin-top: 16px;
+  padding: 14px 18px;
+  background: var(--slate-50);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.preview-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--slate-700);
+}
+
+.preview-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--slate-400);
+}
+
+.table-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filter-pills {
+  display: flex;
+  align-items: center;
+  background: var(--slate-100);
+  padding: 3px;
+  border-radius: var(--radius-md);
+  gap: 2px;
+}
+
+.pill-btn {
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--slate-600);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.pill-btn:hover {
+  color: var(--slate-900);
+}
+
+.pill-btn.active {
+  background: #ffffff;
+  color: var(--slate-900);
+  box-shadow: var(--shadow-xs);
+}
+
+@media (max-width: 900px) {
+  .registration-form-grid {
+    grid-template-columns: 1fr;
+  }
+}

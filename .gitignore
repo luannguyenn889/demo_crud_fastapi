@@ -1,0 +1,22 @@
+# Local secrets and environment configuration
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+
+# Node / Angular generated files
+node_modules/
+dist/
+.angular/cache/
+coverage/
+
+# Local IDE and operating-system files
+.idea/
+.DS_Store
+Thumbs.db
+fe/.vscode/mcp.json

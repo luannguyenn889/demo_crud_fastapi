@@ -1,0 +1,83 @@
+:host {
+  display: block;
+}
+
+.table-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.filter-pills {
+  display: flex;
+  align-items: center;
+  background: var(--slate-100);
+  padding: 3px;
+  border-radius: var(--radius-md);
+  gap: 2px;
+}
+
+.pill-btn {
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--slate-600);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.pill-btn:hover {
+  color: var(--slate-900);
+}
+
+.pill-btn.active {
+  background: #ffffff;
+  color: var(--slate-900);
+  box-shadow: var(--shadow-xs);
+}
+
+.topic-info-box {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  max-width: 380px;
+}
+
+.topic-name {
+  font-weight: 700;
+  color: var(--slate-900);
+  font-size: 13.5px;
+  line-height: 1.35;
+}
+
+.topic-desc {
+  font-size: 11.5px;
+  color: var(--slate-500);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.advisor-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--slate-700);
+}
+
+.advisor-box svg {
+  color: var(--slate-400);
+}
+
+.action-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
