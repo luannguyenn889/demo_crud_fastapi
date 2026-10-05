@@ -156,73 +156,208 @@ Hủy đăng ký cập nhật `trang_thai` thành `DA_HUY`. Bản ghi lịch s�
 
 ## 8. Đối chiếu các nguyên lý SOA
 
-Phần này đối chiếu từng nguyên lý với **hành vi có thể chỉ ra trong mã nguồn**, tác động khi chạy, và phần còn thiếu. “Có” trong bảng chỉ mức độ có bằng chứng thực thi; khả năng về lý thuyết của REST không được tính là tính năng đã triển khai.
+Mục này đối chiếu các nguyên lý cốt lõi của Kiến trúc Hướng Dịch vụ (SOA) **đã được triển khai cụ thể trong mã nguồn** của dự án. Các nguyên lý lý thuyết chưa được áp dụng (như Giao tiếp bất đồng bộ qua hàng đợi / Message Broker, Tự động dò tìm dịch vụ lúc chạy - Service Discovery Registry, hay Tự phục hồi nâng cao - Circuit Breaker) không được đưa vào đây nhằm đảm bảo tính chính xác và bám sát mã nguồn thực tế.
 
-| Nguyên lý | Đánh giá hiện trạng | Bằng chứng trực tiếp | Tác động / phần chưa đạt |
-| --- | --- | --- | --- |
-| Loose coupling — liên kết lỏng | Một phần | `DangKy` gọi hai URL REST riêng bằng `httpx.get`; router lọc route bằng `SERVICE_NAME`. | Có ranh giới giao tiếp HTTP, nhưng chung codebase và database; đăng ký vẫn cần cả hai service danh mục hoạt động. |
-| Reusability — tái sử dụng dịch vụ | Có giao diện để tái sử dụng | Angular gọi các API riêng của SinhVien, DeTai, DangKy; quy tắc đăng ký nằm trong backend. | Chưa có bằng chứng client thứ hai đã sử dụng; mới chứng minh API được công bố, chưa chứng minh mức tái sử dụng thực tế. |
-| Giao tiếp bất đồng bộ | Chưa áp dụng | `httpx.get` đợi phản hồi; endpoint FastAPI trả kết quả ngay cho request. | Phụ thuộc thời gian phản hồi của service khác; không có queue, broker hoặc event. |
-| Quản lý chính sách | Một phần | CORS ở `main.py`; schema ở Pydantic; kiểm tra nghiệp vụ ở service; constraint ở MySQL. | Chưa thấy xác thực/phân quyền, rate limit, QoS, chính sách tập trung; CORS không bảo vệ API khỏi người gọi không được phép. |
-| Khả năng cộng tác | Có ở mức giao thức | REST/HTTP, JSON, schema Pydantic/OpenAPI. | Có thể gọi bằng client khác ngôn ngữ; mã nguồn hiện chỉ thể hiện Angular và Python, chưa có tích hợp ngoài thực tế. |
-| Tự động dò tìm và ràng buộc động | Có tài liệu API, chưa có discovery/binding tự động | FastAPI sinh OpenAPI/Swagger (`/docs`); URL phụ thuộc lấy từ biến môi trường. | Tài liệu API có thể xem được, nhưng không có registry/health-based discovery; frontend vẫn ghi URL cố định. |
-| Tự hồi phục | Chưa áp dụng đầy đủ | `/health`, timeout 3 giây, ánh xạ lỗi phụ thuộc thành 502/503. | Chỉ phát hiện/giới hạn lỗi; không retry, circuit breaker, failover hoặc tự khởi động lại. |
+| Nguyên lý SOA | Đánh giá hiện trạng | Bằng chứng mã nguồn chính | Tác động thực tế trong dự án |
+| :--- | :--- | :--- | :--- |
+| **1. Standardized Service Contract**<br/>*(Hợp đồng dịch vụ chuẩn hóa)* | Triển khai đầy đủ | `be/app/schemas/entities.py`<br/>`be/app/routers/api.py` | Toàn bộ dữ liệu vào/ra được chuẩn hóa bằng Pydantic schemas, REST API và tài liệu OpenAPI/Swagger. |
+| **2. Service Loose Coupling**<br/>*(Liên kết lỏng giữa các dịch vụ)* | Triển khai ở mức giao tiếp | `be/app/services/registration.py` (`verify`)<br/>`be/app/core/config.py` | `DangKy` gọi `SinhVien` và `DeTai` qua HTTP REST độc lập; không import model hay gọi hàm Python trực tiếp của nhau; URL nạp qua biến môi trường. |
+| **3. Service Abstraction**<br/>*(Trừu tượng hóa dịch vụ)* | Triển khai đầy đủ | `be/app/routers/api.py`<br/>`be/app/services/registration.py` | Ẩn toàn bộ logic nghiệp vụ, cấu trúc bảng MySQL và câu lệnh SQLAlchemy ORM đằng sau các endpoint REST API. |
+| **4. Service Reusability**<br/>*(Tái sử dụng dịch vụ)* | Triển khai ở mức API công bố | `be/app/routers/api.py`<br/>`fe/src/app/services/*-api.ts` | Các dịch vụ cung cấp API CRUD dùng chung; quy tắc nghiệp vụ tập trung ở backend để mọi client (Web, Mobile, Test tool) có thể tái sử dụng. |
+| **5. Service Composability**<br/>*(Khả năng hợp thành dịch vụ)* | Triển khai cụ thể | `be/app/services/registration.py` (`create_registration`) | `DangKy Service` đóng vai trò Composite Service, điều phối và xác thực dữ liệu từ hai dịch vụ thành phần (`SinhVien` và `DeTai`) để hoàn tất quy trình đăng ký. |
+| **6. Service Autonomy**<br/>*(Tính tự chủ dịch vụ)* | Triển khai ở mức tiến trình runtime | `be/app/routers/api.py` (`SERVICE_NAME`)<br/>`be/app/main.py` | Ba dịch vụ chạy trên 3 tiến trình độc lập (:8001, :8002, :8003), tự quản lý tập route và vòng đời hoạt động riêng. |
+| **7. Service Interoperability**<br/>*(Khả năng cộng tác / tương thích)* | Triển khai đầy đủ | Frontend Angular (TypeScript)<br/>Backend FastAPI (Python) | Hai công nghệ và ngôn ngữ khác nhau giao tiếp trơn tru thông qua các chuẩn giao thức mở: HTTP/1.1 và định dạng JSON. |
 
-### 8.1. Liên kết lỏng — Loose coupling (một phần)
+---
 
-**Mã đang làm gì:** `be/app/services/registration.py`, hàm `verify`, tạo URL dạng `{url}/{resource}/{key}` rồi gọi HTTP với timeout 3 giây. Khi tạo đăng ký, DangKy Service gọi `GET /sinhviens/{mã}` và `GET /detais/{mã}`. Nó không import model hay gọi hàm Python của hai dịch vụ danh mục để xác minh. Do đó giao kèo giữa chúng là URL, phương thức HTTP, JSON và mã trạng thái.
+### 8.1. Hợp đồng dịch vụ chuẩn hóa (Standardized Service Contract)
 
-**Tác động:** có thể đổi cách cài đặt bên trong SinhVien Service mà không cần sửa DangKy, miễn là hợp đồng endpoint/response vẫn giữ nguyên. Nếu đổi URL, biến môi trường cho phép cấu hình lại địa chỉ backend phụ thuộc.
+- **Nguyên tắc:** Các dịch vụ xuất bản một hợp đồng giao tiếp chính thức, quy định rõ ràng định dạng dữ liệu, phương thức truy cập và ràng buộc kiểu để client và các dịch vụ khác tương tác mà không bị sai lệch.
+- **Mã nguồn thực tế:**
+  1. **Định nghĩa Schema chuẩn hóa bằng Pydantic** trong [be/app/schemas/entities.py](file:///d:/demo_crud_fastapi/be/app/schemas/entities.py#L9-L25):
+     ```python
+     class SinhVienInput(BaseModel):
+         ma_sinh_vien: str = Field(min_length=1, max_length=20)
+         ho_ten: str = Field(min_length=1, max_length=100)
+         email: str | None = Field(default=None, max_length=255)
+         lop: str | None = Field(default=None, max_length=50)
+         nganh: str | None = Field(default=None, max_length=100)
+         so_dien_thoai: str | None = Field(default=None, max_length=20)
 
-**Giới hạn cụ thể:** ba tiến trình vẫn dùng cùng codebase `be/app`; `SERVICE_NAME` chỉ lọc route trong `routers/api.py`. Cả ba còn dùng chung `DATABASE_URL` và schema nên thay đổi cấu trúc bảng có thể ảnh hưởng chéo. Hơn nữa, tạo đăng ký cần phản hồi của cả SinhVien và DeTai; service nào ngừng hoạt động thì request đăng ký lỗi. Kết luận: tách giao tiếp khỏi lời gọi hàm nội bộ, nhưng chưa tách triển khai và dữ liệu hoàn toàn.
+     class SinhVienOut(ORMModel):
+         ma_sinh_vien: str
+         ho_ten: str
+         email: str | None
+         lop: str | None
+         nganh: str | None
+         so_dien_thoai: str | None
+     ```
+  2. **Ràng buộc hợp đồng tại Router bằng `response_model`** trong [be/app/routers/api.py](file:///d:/demo_crud_fastapi/be/app/routers/api.py#L14-L25):
+     ```python
+     @api.get("/sinhviens", response_model=list[SinhVienOut], tags=["SinhVien Service"])
+     def sinhviens(q: str | None = None, db: Session = Depends(get_db)):
+         return catalog.list_sinhvien(db, q)
 
-### 8.2. Tái sử dụng dịch vụ — Reusability (đã có API, chưa chứng minh nhiều consumer)
+     @api.post("/sinhviens", response_model=SinhVienOut, status_code=201, tags=["SinhVien Service"])
+     def create_sinhvien(data: SinhVienInput, db: Session = Depends(get_db)):
+         return catalog.save_sinhvien(db, data.model_dump())
+     ```
+  3. **Tài liệu hóa hợp đồng tự động:** FastAPI tự động phân tích các Pydantic Schemas và Routers để tạo tài liệu OpenAPI 3.0 và Swagger UI tại `/docs`, cho phép các consumer kiểm tra đặc tả hợp đồng API trực tiếp.
 
-**Mã đang làm gì:** Angular gọi cùng hợp đồng backend qua `fe/src/app/services/student-api.ts`, `topic-api.ts` và `registration-api.ts`. Ví dụ, `StudentApi` gửi `GET/POST/PUT/DELETE` tới `/api/v1/sinhviens`; nghiệp vụ kiểm tra trạng thái đề tài, trùng cặp và sức chứa chỉ nằm ở `registration.create_registration`.
+---
 
-**Tác động:** client khác có thể gọi các endpoint mà không sao chép quy tắc nghiệp vụ vào giao diện. Angular cũng không cần biết chi tiết kết nối MySQL.
+### 8.2. Liên kết lỏng (Service Loose Coupling)
 
-**Giới hạn cụ thể:** trong dự án hiện chỉ có Angular làm client nhìn thấy được. Không có ứng dụng di động/đối tác thứ hai hoặc thống kê sử dụng. Vì vậy diễn đạt chính xác là “API đã được thiết kế/công bố để tái sử dụng”, không phải “đã được nhiều hệ thống tái sử dụng”.
+- **Nguyên tắc:** Giảm thiểu sự phụ thuộc trực tiếp giữa các dịch vụ. Khi một dịch vụ cần dữ liệu của dịch vụ khác, nó tương tác qua giao thức chuẩn (HTTP REST), không phụ thuộc vào mã nguồn nội bộ hay lời gọi hàm trong cùng bộ nhớ.
+- **Mã nguồn thực tế:**
+  1. **Giao tiếp qua HTTP REST thay vì gọi hàm Python** trong [be/app/services/registration.py](file:///d:/demo_crud_fastapi/be/app/services/registration.py#L11-L20):
+     ```python
+     def verify(url: str, resource: str, key: str):
+         try:
+             response = httpx.get(f"{url}/{resource}/{key}", timeout=3.0)
+         except httpx.RequestError as exc:
+             raise HTTPException(503, f"Dịch vụ {resource} hiện không khả dụng") from exc
+         if response.status_code == 404:
+             raise HTTPException(404, f"Không tìm thấy {resource}")
+         if response.is_error:
+             raise HTTPException(502, f"Dịch vụ {resource} phản hồi lỗi")
+         return response.json()
+     ```
+  2. **Tách biệt địa chỉ dịch vụ qua biến môi trường** trong [be/app/core/config.py](file:///d:/demo_crud_fastapi/be/app/core/config.py#L13-L15):
+     ```python
+     SINHVIEN_SERVICE_URL = os.getenv("SINHVIEN_SERVICE_URL", "http://127.0.0.1:8001/api/v1")
+     DETAI_SERVICE_URL = os.getenv("DETAI_SERVICE_URL", "http://127.0.0.1:8002/api/v1")
+     ```
+  - **Tác động:** Dịch vụ Đăng ký (`DangKy`) không hề `import` các hàm của module `catalog.py` hay bảng `SinhVien`, `DeTai`. Địa chỉ IP/Port của các dịch vụ phụ thuộc có thể thay đổi linh hoạt qua cấu hình môi trường mà không cần sửa code.
 
-### 8.3. Tự động dò tìm và ràng buộc động (có tài liệu API, chưa có discovery/binding tự động)
+---
 
-**Mã đang làm gì:** FastAPI cung cấp OpenAPI/Swagger tại `/docs`, giúp người phát triển xem endpoint, phương thức và schema; URL gọi chéo backend được nạp từ `SINHVIEN_SERVICE_URL` và `DETAI_SERVICE_URL` trong `be/app/core/config.py`.
+### 8.3. Trừu tượng hóa dịch vụ (Service Abstraction)
 
-**Tác động:** developer có thể khám phá hợp đồng API qua tài liệu; địa chỉ backend phụ thuộc có thể đổi theo môi trường mà không sửa hàm `verify`.
+- **Nguyên tắc:** Dịch vụ chỉ phơi bày giao diện công khai (REST endpoints và dữ liệu JSON đầu vào/ra), ẩn giấu hoàn toàn logic tính toán nội bộ, công nghệ lưu trữ dữ liệu (SQLAlchemy, MySQL) và chi tiết cài đặt.
+- **Mã nguồn thực tế:**
+  1. **Client chỉ nhìn thấy endpoint và schema đơn giản** trong [be/app/routers/api.py](file:///d:/demo_crud_fastapi/be/app/routers/api.py#L71-L73):
+     ```python
+     @api.post("/dang-ky", response_model=DangKyOut, status_code=201, tags=["DangKy Service"])
+     def create_dangky(data: DangKyInput, db: Session = Depends(get_db)):
+         return registration.create_registration(db, data.ma_sinh_vien, data.ma_de_tai)
+     ```
+  2. **Toàn bộ logic nghiệp vụ, câu lệnh ORM và kiểm tra ràng buộc được đóng gói kín** trong [be/app/services/registration.py](file:///d:/demo_crud_fastapi/be/app/services/registration.py#L26-L46):
+     ```python
+     if topic["trang_thai"] != "MO_DANG_KY":
+         raise HTTPException(409, "Đề tài đã đóng đăng ký")
 
-**Giới hạn cụ thể:** đây là khám phá tài liệu, không phải service discovery lúc chạy. Không thấy registry để đăng ký instance, tra cứu địa chỉ, kiểm tra instance sống hoặc cân bằng tải. Ba endpoint frontend còn ghi trực tiếp `localhost:8001/8002/8003` trong các Angular API client.
+     active_registration = db.scalar(
+         select(DangKy).where(
+             DangKy.ma_sinh_vien == student_key,
+             DangKy.trang_thai == "DA_DANG_KY",
+         )
+     )
+     if active_registration:
+         raise HTTPException(409, "Sinh viên cần hủy đăng ký hiện tại trước khi đăng ký đề tài khác")
 
-### 8.4. Khả năng cộng tác (có ở mức giao thức)
+     count = db.scalar(select(func.count()).select_from(DangKy).where(
+         DangKy.ma_de_tai == topic_key, DangKy.trang_thai == "DA_DANG_KY"
+     ))
+     if count >= topic["so_luong_toi_da"]:
+         raise HTTPException(409, "Đề tài đã đủ số lượng sinh viên")
+     ```
+  - **Tác động:** Phía Angular Frontend hay các bên gọi API chỉ cần gửi mã sinh viên và mã đề tài; họ hoàn toàn không biết bên trong có bảng dữ liệu nào, truy vấn SQL ra sao hay số lượng sinh viên được đếm bằng cơ chế gì.
 
-**Mã đang làm gì:** backend nhận HTTP và JSON; Pydantic khai báo cấu trúc dữ liệu và FastAPI xuất OpenAPI. Angular tiêu thụ những endpoint đó qua `HttpClient`.
+---
 
-**Tác động:** client không cần dùng Python hay SQLAlchemy; nếu tuân thủ HTTP, JSON và hợp đồng endpoint, client Java/C#/mobile có thể tích hợp.
+### 8.4. Khả năng tái sử dụng (Service Reusability)
 
-**Giới hạn cụ thể:** đó là khả năng theo chuẩn giao tiếp, chưa phải bằng chứng đã kết nối hệ thống đa ngôn ngữ. Repository hiện không thể hiện consumer ngoài Angular hoặc đối tác legacy.
+- **Nguyên tắc:** Logic nghiệp vụ cốt lõi được xây dựng thành các dịch vụ độc lập, có thể tái sử dụng bởi nhiều ứng dụng, giao diện hoặc tiến trình khác nhau mà không cần cài đặt lại logic.
+- **Mã nguồn thực tế:**
+  1. **Các endpoint CRUD được phát hành độc lập** trong [be/app/routers/api.py](file:///d:/demo_crud_fastapi/be/app/routers/api.py#L14-L62) cung cấp đầy đủ các thao tác tìm kiếm, xem chi tiết, thêm, sửa, xóa cho SinhVien và DeTai.
+  2. **Dịch vụ DangKy tái sử dụng trực tiếp API của SinhVien và DeTai** qua HTTP để phục vụ bước xác minh đăng ký:
+     ```python
+     # be/app/services/registration.py
+     verify(SINHVIEN_SERVICE_URL, "sinhviens", student_key)
+     topic = verify(DETAI_SERVICE_URL, "detais", topic_key)
+     ```
+  3. **Frontend Angular tái sử dụng các API này** thông qua service client trong [fe/src/app/services/student-api.ts](file:///d:/demo_crud_fastapi/fe/src/app/services/student-api.ts#L13-L26):
+     ```typescript
+     list(q?: string): Observable<SinhVien[]> {
+       let params = new HttpParams();
+       if (q) params = params.set('q', q);
+       return this.http.get<SinhVien[]>(this.baseUrl, { params });
+     }
 
-### 8.5. Giao tiếp bất đồng bộ (chưa áp dụng)
+     create(data: SinhVienInput): Observable<SinhVien> {
+       return this.http.post<SinhVien>(this.baseUrl, data);
+     }
+     ```
+  - **Tác động:** Bất kỳ client nào khác trong tương lai (ứng dụng di động, trang quản trị giáo vụ, script import dữ liệu) đều có thể gọi lại các API này mà không cần viết lại quy tắc kiểm tra ràng buộc.
 
-**Mã đang làm gì:** `httpx.get(...)` trong `verify` là lời gọi đồng bộ; hàm đợi từng phản hồi trước khi tiếp tục. Endpoint `POST /api/v1/dang-ky` chỉ trả `201` sau khi kiểm tra xong và ghi database.
+---
 
-**Tác động:** người dùng nhận kết quả ngay trong cùng request, phù hợp luồng demo cần biết đăng ký thành công hay thất bại. Đổi lại, thời gian chờ cộng dồn theo phản hồi của các service phụ thuộc.
+### 8.5. Khả năng hợp thành dịch vụ (Service Composability)
 
-**Giới hạn cụ thể:** không thấy queue, broker, publish/subscribe hoặc xử lý event nền. Đây là lựa chọn kiến trúc hiện tại, không phải một năng lực bất đồng bộ.
+- **Nguyên tắc:** Các dịch vụ hạt nhân đơn lẻ (Atomic Services) có thể được kết hợp và điều phối để tạo thành một dịch vụ phức hợp (Composite Service) giải quyết bài toán nghiệp vụ quy mô lớn hơn.
+- **Mã nguồn thực tế:**
+  - `DangKy Service` đóng vai trò **Composite Service** điều phối quy trình đăng ký đề tài phức hợp trong [be/app/services/registration.py](file:///d:/demo_crud_fastapi/be/app/services/registration.py#L23-L44):
+    ```python
+    def create_registration(db: Session, student_key: str, topic_key: str):
+        # 1. Điều phối tới Atomic Service SinhVien: Kiểm tra sinh viên tồn tại
+        verify(SINHVIEN_SERVICE_URL, "sinhviens", student_key)
 
-### 8.6. Quản lý chính sách (một phần, chưa tập trung)
+        # 2. Điều phối tới Atomic Service DeTai: Lấy thông tin & trạng thái đề tài
+        topic = verify(DETAI_SERVICE_URL, "detais", topic_key)
 
-**Mã đang làm gì:** `main.py` giới hạn origin bằng CORS; schema Pydantic kiểm tra kiểu và trường request; `registration.py` áp dụng quy tắc trạng thái, trùng và sức chứa; MySQL ràng buộc FK/unique; API dùng các mã lỗi HTTP để biểu diễn trường hợp lỗi.
+        # 3. Tổng hợp kết quả & thực thi nghiệp vụ đăng ký
+        if topic["trang_thai"] != "MO_DANG_KY":
+            raise HTTPException(409, "Đề tài đã đóng đăng ký")
+        ...
+        record = DangKy(ma_sinh_vien=student_key, ma_de_tai=topic_key)
+        db.add(record)
+        db.commit()
+        return record
+    ```
+  - **Tác động:** Nghiệp vụ "Đăng ký đề tài" không tự quản lý dữ liệu sinh viên hay đề tài mà hợp thành (compose) dữ liệu từ hai dịch vụ danh mục độc lập để hoàn tất một giao dịch kinh doanh.
 
-**Tác động:** một số chính sách giao tiếp, hợp lệ dữ liệu và nghiệp vụ được thực thi ở đúng lớp tương ứng. Client nhận được phản hồi có thể xử lý thay vì chỉ nhận lỗi chung.
+---
 
-**Giới hạn cụ thể:** chưa thấy authentication/authorization (ai được tạo/xóa), policy engine hoặc nơi quản lý tập trung, giới hạn tốc độ/QoS, hay chính sách bảo mật xuyên các service. CORS chỉ quyết định trình duyệt nào được phép đọc phản hồi; nó không xác thực người dùng và không chặn mọi client HTTP.
+### 8.6. Tính tự chủ dịch vụ (Service Autonomy)
 
-### 8.7. Tự hồi phục (phát hiện lỗi có, phục hồi tự động chưa có)
+- **Nguyên tắc:** Mỗi dịch vụ kiểm soát phạm vi và quyền hạn thực thi của riêng mình, chạy như một tiến trình runtime độc lập và có thể quản lý vòng đời mà không ảnh hưởng tới tiến trình khác.
+- **Mã nguồn thực tế:**
+  1. **Lọc và cô lập route riêng biệt theo biến môi trường `SERVICE_NAME`** trong [be/app/routers/api.py](file:///d:/demo_crud_fastapi/be/app/routers/api.py#L85-L90):
+     ```python
+     if SERVICE_NAME == "sinhvien":
+         api.routes[:] = [r for r in api.routes if "SinhVien Service" in getattr(r, "tags", [])]
+     elif SERVICE_NAME == "detai":
+         api.routes[:] = [r for r in api.routes if "DeTai Service" in getattr(r, "tags", [])]
+     elif SERVICE_NAME == "dangky":
+         api.routes[:] = [r for r in api.routes if "DangKy Service" in getattr(r, "tags", [])]
+     ```
+  2. **Triển khai độc lập trên 3 cổng tiến trình riêng biệt:**
+     - **SinhVien Service**: Chạy trên Port `8001` (`$env:SERVICE_NAME="sinhvien"`)
+     - **DeTai Service**: Chạy trên Port `8002` (`$env:SERVICE_NAME="detai"`)
+     - **DangKy Service**: Chạy trên Port `8003` (`$env:SERVICE_NAME="dangky"`)
+  - **Tác động:** Mỗi tiến trình runtime có thể được dừng, khởi động lại, reload cấu hình độc lập mà không làm tắt runtime của các dịch vụ còn lại.
 
-**Mã đang làm gì:** `/health` trong `main.py` chạy `SELECT 1` để kiểm tra DB; `verify` giới hạn lời gọi phụ thuộc ở 3 giây. Lỗi kết nối chuyển thành 503, lỗi HTTP từ service phụ thuộc thành 502, còn 404 được giữ ý nghĩa “không tìm thấy”.
+---
 
-**Tác động:** client biết dependency nào đang lỗi và request không chờ vô hạn. Endpoint health giúp công cụ vận hành kiểm tra tình trạng backend/database.
+### 8.7. Khả năng cộng tác / tương thích (Service Interoperability)
 
-**Giới hạn cụ thể:** trả mã lỗi là phát hiện/lan truyền lỗi, không phải tự khôi phục. Không thấy retry có backoff, circuit breaker, chuyển sang replica, hàng đợi lưu request để thử lại hoặc orchestrator khởi động lại tiến trình. Khi SinhVien/DeTai mất kết nối, đăng ký thất bại cho đến khi dependency hoạt động lại.
+- **Nguyên tắc:** Dịch vụ có khả năng tương tác xuyên suốt giữa các nền tảng, kiến trúc máy tính và ngôn ngữ lập trình khác nhau thông qua việc áp dụng chuẩn công nghệ mở (Open Standards).
+- **Mã nguồn thực tế:**
+  1. **Phía Server (Python / FastAPI):** Tiếp nhận và phản hồi dữ liệu chuẩn JSON qua giao thức HTTP/1.1:
+     ```python
+     # be/app/routers/api.py
+     @api.post("/dang-ky", response_model=DangKyOut, status_code=201)
+     def create_dangky(data: DangKyInput, db: Session = Depends(get_db)):
+         return registration.create_registration(db, data.ma_sinh_vien, data.ma_de_tai)
+     ```
+  2. **Phía Client (TypeScript / Angular 21):** Sử dụng `HttpClient` để gửi nhận dữ liệu JSON mà không cần bất kỳ module Python hay thư viện SQLAlchemy nào trong [fe/src/app/services/registration-api.ts](file:///d:/demo_crud_fastapi/fe/src/app/services/registration-api.ts#L17-L21):
+     ```typescript
+     create(data: DangKyInput): Observable<DangKy> {
+       return this.http.post<DangKy>(this.baseUrl, data);
+     }
+     ```
+  - **Tác động:** Sự tách biệt giữa Python (Backend) và TypeScript (Frontend) chứng minh tính cộng tác hoàn hảo: bất kỳ công nghệ nào hiểu HTTP và JSON (như Java, C#, Flutter, React, cURL) đều có thể tương tác với các dịch vụ này.
 
 ## 9. Hướng phát triển nếu mở rộng
 
@@ -245,58 +380,29 @@ Khi chuyển từ bản trình diễn sang triển khai thực tế, có thể c
 
 ### 11.1. Cách lần theo code khi trình bày từng nguyên lý SOA
 
-Các vị trí dưới đây tính theo số dòng của file hiện tại. Có thể mở file theo link, lần theo luồng request vào router → xử lý nghiệp vụ → gọi HTTP/truy cập dữ liệu → response.
+Khi thuyết minh hoặc báo cáo về kiến trúc SOA của dự án, có thể mở trực tiếp các file và dòng code sau đây để minh chứng:
 
-#### Loose coupling — liên kết lỏng
+1. **Standardized Service Contract (Hợp đồng chuẩn hóa):**
+   - Mở [be/app/schemas/entities.py](file:///d:/demo_crud_fastapi/be/app/schemas/entities.py#L9-L25): Trình bày các Pydantic class (`SinhVienInput`, `SinhVienOut`, `DangKyInput`) quy định kiểu dữ liệu, độ dài và thuộc tính bắt buộc.
+   - Mở [be/app/routers/api.py](file:///d:/demo_crud_fastapi/be/app/routers/api.py#L14-L25): Chỉ ra tham số `response_model` và cách FastAPI tự sinh tài liệu chuẩn OpenAPI tại `/docs`.
 
-- **Chọn nhóm API được cung cấp:** [be/app/routers/api.py](be/app/routers/api.py#L11) khai báo tiền tố `/api/v1`; các route được gắn tag SinhVien, DeTai hoặc DangKy. Cuối file, dòng 85–90 giữ lại nhóm route khớp `SERVICE_NAME`. Cùng ứng dụng do đó có thể chạy với phạm vi API khác nhau theo cấu hình.
-- **Gọi qua hợp đồng HTTP:** [be/app/services/registration.py](be/app/services/registration.py#L11) định nghĩa `verify`. Dòng 13 ghép URL, resource và key rồi gọi `httpx.get` với timeout 3 giây. Dòng 16–20 chuyển 404 thành “không tìm thấy”, lỗi HTTP khác thành 502 và trả JSON nếu thành công. Dòng 24–25 gọi lần lượt API sinh viên và đề tài.
-- **Cấu hình địa chỉ:** [be/app/core/config.py](be/app/core/config.py#L13)–[14](be/app/core/config.py#L14) lấy URL phụ thuộc từ biến môi trường, có giá trị mặc định.
-- **Diễn tiến:** POST đăng ký → router gọi hàm nghiệp vụ → DangKy gọi hai API bằng HTTP → kiểm tra JSON → ghi đăng ký. DangKy không gọi trực tiếp hàm Python của catalog để xác minh.
-- **Giới hạn:** [api.py](be/app/routers/api.py#L7) import cả ba ORM model và [connection.py](be/app/database/connection.py#L11) tạo engine dùng `DATABASE_URL`; giao tiếp được tách qua HTTP nhưng codebase và database vẫn dùng chung.
+2. **Loose Coupling (Liên kết lỏng):**
+   - Mở [be/app/services/registration.py](file:///d:/demo_crud_fastapi/be/app/services/registration.py#L11-L20): Chỉ ra hàm `verify` sử dụng `httpx.get` để gọi sang dịch vụ `SinhVien` và `DeTai` qua HTTP REST thay vì gọi hàm Python trong bộ nhớ.
+   - Mở [be/app/core/config.py](file:///d:/demo_crud_fastapi/be/app/core/config.py#L13-L15): Cho thấy URL của dịch vụ phụ thuộc được nạp động từ biến môi trường.
 
-#### Reusability — tái sử dụng dịch vụ
+3. **Service Abstraction (Trừu tượng hóa dịch vụ):**
+   - Mở [be/app/routers/api.py](file:///d:/demo_crud_fastapi/be/app/routers/api.py#L71-L73): Cho thấy router chỉ tiếp nhận request và chuyển giao cho service.
+   - Mở [be/app/services/registration.py](file:///d:/demo_crud_fastapi/be/app/services/registration.py#L26-L46): Cho thấy toàn bộ logic kiểm tra sức chứa, trùng lặp và truy vấn SQL/ORM đều được giấu kín sau endpoint.
 
-- **API được công bố:** [be/app/routers/api.py](be/app/routers/api.py#L14)–[37](be/app/routers/api.py#L37) khai báo CRUD sinh viên; dòng 39–62 khai báo CRUD đề tài; dòng 64–82 khai báo đọc, tạo và hủy đăng ký.
-- **Client hiện có:** [student-api.ts](fe/src/app/services/student-api.ts#L9)–[27](fe/src/app/services/student-api.ts#L27) bọc lời gọi HTTP sinh viên. `topic-api.ts` và `registration-api.ts` làm tương tự cho hai API còn lại. `list()` gọi GET, `create()` gọi POST, `update()` gọi PUT.
-- **Nghiệp vụ ở backend:** [api.py](be/app/routers/api.py#L71)–[73](be/app/routers/api.py#L73) chuyển request đăng ký vào `registration.create_registration`; component Angular không tự áp dụng các quy tắc này.
-- **Diễn tiến:** client gửi request theo hợp đồng REST → backend xử lý → client nhận dữ liệu hoặc mã lỗi. Client khác có thể gọi cùng endpoint mà không chép lại quy tắc nghiệp vụ.
-- **Giới hạn:** repository chỉ cho thấy Angular là consumer; chưa có bằng chứng client thứ hai thực sự gọi API. Kết luận phù hợp là “API có thể tái sử dụng”.
+4. **Service Reusability (Tái sử dụng dịch vụ):**
+   - Mở [be/app/routers/api.py](file:///d:/demo_crud_fastapi/be/app/routers/api.py#L14-L62): Giới thiệu các API CRUD độc lập.
+   - Mở [fe/src/app/services/student-api.ts](file:///d:/demo_crud_fastapi/fe/src/app/services/student-api.ts#L13-L26): Chỉ ra Angular tái sử dụng API này để thao tác dữ liệu mà không cần biết chi tiết cơ sở dữ liệu.
 
-#### Tự động dò tìm và ràng buộc động
+5. **Service Composability (Khả năng hợp thành dịch vụ):**
+   - Mở [be/app/services/registration.py](file:///d:/demo_crud_fastapi/be/app/services/registration.py#L23-L44): Chỉ ra luồng của hàm `create_registration` khi điều phối (orchestration) hai lời gọi đến `SINHVIEN_SERVICE_URL` và `DETAI_SERVICE_URL` để hoàn tất quy trình nghiệp vụ tổng hợp.
 
-- [be/app/main.py](be/app/main.py#L9) khởi tạo FastAPI; FastAPI tạo OpenAPI và Swagger mặc định tại `/docs`. Các route và `response_model` ở [api.py](be/app/routers/api.py#L14)–[82](be/app/routers/api.py#L82) cung cấp thông tin endpoint/schema cho tài liệu.
-- [config.py](be/app/core/config.py#L13)–[15](be/app/core/config.py#L15) đọc URL dịch vụ và tên service từ môi trường; [registration.py](be/app/services/registration.py#L23)–[25](be/app/services/registration.py#L25) dùng URL đó khi chạy.
-- **Diễn tiến:** developer xem hợp đồng trên Swagger; khi khởi động backend, cấu hình môi trường quyết định tên service và URL dependency.
-- **Giới hạn:** đây không phải service discovery. Không có registry chọn instance khỏe; URL frontend được ghi cố định, ví dụ [student-api.ts](fe/src/app/services/student-api.ts#L11). Topic và registration client cũng khai báo URL theo cách tương tự.
+6. **Service Autonomy (Tính tự chủ dịch vụ):**
+   - Mở [be/app/routers/api.py](file:///d:/demo_crud_fastapi/be/app/routers/api.py#L85-L90): Chỉ ra đoạn code lọc route theo biến môi trường `$env:SERVICE_NAME` giúp tách thành 3 tiến trình độc lập trên 3 cổng `:8001`, `:8002`, `:8003`.
 
-#### Khả năng cộng tác — interoperability
-
-- **Hợp đồng dữ liệu:** [be/app/schemas/entities.py](be/app/schemas/entities.py#L9)–[16](be/app/schemas/entities.py#L16) mô tả dữ liệu vào sinh viên; dòng 18–24 mô tả dữ liệu trả về. `DeTaiInput/Out` và `DangKyInput/Out` được khai báo tiếp theo. `Field` nêu kiểu và giới hạn dữ liệu.
-- **Hợp đồng giao tiếp:** route ở [api.py](be/app/routers/api.py#L14)–[82](be/app/routers/api.py#L82) dùng HTTP và response model; Angular dùng `HttpClient`, ví dụ [student-api.ts](fe/src/app/services/student-api.ts#L13)–[26](fe/src/app/services/student-api.ts#L26).
-- **Diễn tiến:** client gửi HTTP/JSON đúng schema, rồi đọc JSON/status code; không cần dùng Python, SQLAlchemy hay truy cập MySQL.
-- **Giới hạn:** client Java, C# hoặc mobile là khả năng từ hợp đồng giao tiếp, chưa phải tích hợp đã có trong repository.
-
-#### Giao tiếp bất đồng bộ
-
-- [registration.py](be/app/services/registration.py#L11)–[20](be/app/services/registration.py#L20) dùng `httpx.get` đồng bộ. `create_registration` gọi verify sinh viên rồi verify đề tài ở dòng 24–25; sau đó mới kiểm tra nghiệp vụ và commit ở dòng 26–37. Router [api.py](be/app/routers/api.py#L71)–[73](be/app/routers/api.py#L73) trả kết quả trong request POST.
-- **Diễn tiến:** request chờ service sinh viên phản hồi, tiếp đó chờ service đề tài, rồi mới trả kết quả. Timeout giới hạn thời gian chờ mỗi lần gọi.
-- **Kết luận:** chưa thấy queue, broker, event hay tác vụ nền trong luồng này; hệ thống đang giao tiếp đồng bộ.
-
-#### Quản lý chính sách
-
-- **Origin trình duyệt:** [be/app/main.py](be/app/main.py#L10) cấu hình CORS từ `CORS_ORIGINS`, được đọc tại [config.py](be/app/core/config.py#L16). CORS không xác thực người dùng.
-- **Dữ liệu đầu vào:** [be/app/schemas/entities.py](be/app/schemas/entities.py#L9)–[16](be/app/schemas/entities.py#L16) và dòng 27–33 khai báo kiểu/giới hạn. FastAPI/Pydantic xác thực trước khi chạy phần xử lý endpoint.
-- **Quy tắc nghiệp vụ:** [be/app/services/registration.py](be/app/services/registration.py#L26)–[37](be/app/services/registration.py#L37) kiểm tra trạng thái mở, đăng ký trùng, sức chứa và lỗi toàn vẹn lúc commit.
-- **Toàn vẹn dữ liệu:** [be/app/models/entities.py](be/app/models/entities.py#L30)–[37](be/app/models/entities.py#L37) định nghĩa unique constraint, khóa ngoại và trạng thái.
-- **Diễn tiến:** request qua validation → quy tắc nghiệp vụ → database áp dụng ràng buộc. Vi phạm được chuyển thành mã lỗi HTTP.
-- **Giới hạn:** các chính sách nằm ở nhiều lớp; mã nguồn hiện tại chưa thể hiện authentication/authorization, rate limit, QoS hay policy engine tập trung.
-
-#### Tự hồi phục
-
-- **Kiểm tra sức khỏe:** [be/app/main.py](be/app/main.py#L14)–[20](be/app/main.py#L20) định nghĩa `GET /health`; hàm chạy `SELECT 1` và trả `ok` hoặc `degraded`.
-- **Giới hạn chờ và truyền lỗi:** [registration.py](be/app/services/registration.py#L11)–[19](be/app/services/registration.py#L19) đặt timeout 3 giây; lỗi kết nối thành 503, lỗi HTTP từ dependency thành 502, còn 404 giữ nguyên.
-- **Diễn tiến:** hệ thống phát hiện một số lỗi và trả phản hồi hữu hạn để client biết request thất bại. Health check kiểm tra DB, không tự khôi phục dịch vụ.
-- **Giới hạn:** không thấy retry/backoff, circuit breaker, failover hay lệnh khởi động lại tiến trình. Timeout và health endpoint giúp phát hiện/giới hạn lỗi; chúng không tự khôi phục dependency.
-
-**Cách kết luận khi báo cáo:** với mỗi nguyên lý, chỉ vào đoạn code, mô tả thứ tự request chạy qua các bước rồi nêu mức hỗ trợ và giới hạn. Không suy từ việc dùng REST thành đã có discovery, tự hồi phục hoặc giao tiếp bất đồng bộ; cần có code/thành phần tương ứng mới kết luận đã triển khai.
+7. **Service Interoperability (Khả năng tương tác / cộng tác):**
+   - So sánh giữa Frontend [fe/src/app/services/registration-api.ts](file:///d:/demo_crud_fastapi/fe/src/app/services/registration-api.ts) (TypeScript / Angular) và Backend [be/app/routers/api.py](file:///d:/demo_crud_fastapi/be/app/routers/api.py) (Python / FastAPI) giao tiếp trơn tru bằng chuẩn HTTP/REST + JSON.

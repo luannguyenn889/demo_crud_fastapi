@@ -51,7 +51,9 @@ python -m venv .venv
 python -m pip install -r requirements.txt
 ```
 
-Mở **ba cửa sổ PowerShell riêng**, chuyển từng cửa sổ vào `be`, kích hoạt `.venv`, rồi đặt `SERVICE_NAME` và chạy service tương ứng. Cả ba tiến trình cùng đọc `DATABASE_URL` từ `.env`:
+> **Mẹo chạy nhanh trên Windows:** Bạn có thể nhấp đúp chuột vào file `start_backend.bat` ở thư mục gốc để tự động mở và chạy cả 3 service cùng lúc trên 3 cửa sổ riêng biệt. Khi muốn tắt, nhấp đúp file `stop_backend.bat`.
+
+Hoặc mở **ba cửa sổ PowerShell riêng**, chuyển từng cửa sổ vào `be`, kích hoạt `.venv`, rồi đặt `SERVICE_NAME` và chạy service tương ứng. Cả ba tiến trình cùng đọc `DATABASE_URL` từ `.env`:
 
 ```powershell
 $env:SERVICE_NAME = "sinhvien"
