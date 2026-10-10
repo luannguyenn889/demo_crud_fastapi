@@ -51,7 +51,23 @@ python -m venv .venv
 python -m pip install -r requirements.txt
 ```
 
-> **Mẹo chạy nhanh trên Windows:** Bạn có thể nhấp đúp chuột vào file `start_backend.bat` ở thư mục gốc để tự động mở và chạy cả 3 service cùng lúc trên 3 cửa sổ riêng biệt. Khi muốn tắt, nhấp đúp file `stop_backend.bat`.
+### Chạy backend bằng file `.bat` trên Windows
+
+Sau khi tạo database, cấu hình `be/.env` và cài dependencies backend như hướng dẫn ở trên, mở PowerShell tại thư mục gốc dự án rồi chạy:
+
+```powershell
+.\start_backend.bat
+```
+
+File này mở ba cửa sổ riêng và chạy SinhVien (`8001`), DeTai (`8002`) và DangKy (`8003`). Giữ các cửa sổ service mở trong khi sử dụng ứng dụng.
+
+Để dừng các service, mở PowerShell tại thư mục gốc dự án và chạy:
+
+```powershell
+.\stop_backend.bat
+```
+
+Hai lệnh trên cũng có thể chạy từ Command Prompt bằng `start_backend.bat` và `stop_backend.bat`. Có thể nhấp đúp các file tương ứng trong File Explorer để chạy.
 
 Hoặc mở **ba cửa sổ PowerShell riêng**, chuyển từng cửa sổ vào `be`, kích hoạt `.venv`, rồi đặt `SERVICE_NAME` và chạy service tương ứng. Cả ba tiến trình cùng đọc `DATABASE_URL` từ `.env`:
 
